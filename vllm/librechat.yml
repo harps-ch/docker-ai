@@ -80,7 +80,9 @@ interface:
   fileCitations: true
   feedback: true
 registration:
-  socialLogins: ['github']
+  allowedDomains:
+  - "harps.ch"
+  - "spiderbus.ch"
 actions:
   allowedDomains:
     - 'swapi.dev'
