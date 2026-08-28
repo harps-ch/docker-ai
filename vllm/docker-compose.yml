@@ -89,8 +89,6 @@ services:
   vectordb:
     container_name: vectordb
     image: pgvector/pgvector:0.8.0-pg15-trixie
-    networks:
-      - backend
     environment:
       POSTGRES_DB: ${POSTRGES_DB}
       POSTGRES_USER: ${POSTRGES_USER}
