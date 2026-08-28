@@ -3,7 +3,7 @@ services:
     image: vllm/vllm-openai:latest
     runtime: nvidia
     ports:
-      - "8000:8000"
+      - "7000:7000"
     volumes:
       - huggingface-cache:/root/.cache/huggingface
     environment:
@@ -19,7 +19,7 @@ services:
     command: >
       --model Qwen/Qwen3.8-27B
       --host 0.0.0.0
-      --port 8000
+      --port 7000
       --gpu-memory-utilization 0.9
 
   api:
@@ -58,17 +58,17 @@ services:
     container_name: admin-panel
     image: registry.librechat.ai/clickhouse/librechat-admin-panel:latest
     ports:
-      - "${ADMIN_PANEL_PORT:-3000}:5000"
+      - "${ADMIN_PANEL_PORT:-5000}:5000"
     depends_on:
       - api
     restart: always
     environment:
-      - PORT=${ADMIN_PANEL_PORT:-3000}
+      - PORT=${ADMIN_PANEL_PORT:-5000}
       # Plain expansion (not :?) so `docker compose down`/`pull` still run when this is unset.
       # The panel itself refuses to start without it; set ADMIN_PANEL_SESSION_SECRET in .env.
       - SESSION_SECRET=${ADMIN_PANEL_SESSION_SECRET}
       - API_SERVER_URL=http://api:${PORT:-3080}
-      - VITE_API_BASE_URL=${DOMAIN_CLIENT:-http://localhost:3080}
+      - VITE_API_BASE_URL=${DOMAIN_CLIENT:-http://localhost:-3080}
       - SESSION_COOKIE_SECURE=${ADMIN_PANEL_SESSION_COOKIE_SECURE:-false}
 
   mongodb:
