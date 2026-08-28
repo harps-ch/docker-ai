@@ -1,0 +1,111 @@
+services:
+  ollama:
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    ports:
+      - 11434:11434
+    image: ollama/ollama:latest
+    networks:
+      - outside
+      - backend
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:dev-cuda
+    container_name: open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - ${OPENWEBUIPORT-3000}:8080
+    environment:
+      - "OLLAMABASEURL=http://ollama:11434"
+      - "WEBUISECRETKEY=${OPENWEBUI_SERCRET_KEY}"
+      - "ENABLE_WEB_SEARCH=True"
+      - "WEB_SEARCH_ENGINE=searxng"
+      - "WEB_SEARCH_RESULT_COUNT=3"
+      - "WEB_SEARCH_CONCURRE=http://searxng-core.ollama_backend:8080/search?q=<query>"
+      - host.docker.internal:host-gateway
+      - >-
+        TERMINAL_SERVER_CONNECTIONS=[{
+          "id": "terminals",
+          "name": "Terminals",
+          "enabled": true,
+          "url": "http://terminals:3000",
+          "key": "${TERMINALS_API_KEY}",
+          "auth_type": "bearer",
+          "config": {
+            "access_grants": [{
+              "principal_type": "user",
+              "principal_id": "*",
+              "permission": "read"
+            }]
+          }
+        }]
+    restart: unless-stopped
+    networks:
+      - outside
+      - backend
+
+  searxng:
+    container_name: searxng-core
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - ${SEARXNG_HOST:+${SEARXNG_HOST}:}${SEARXNG_PORT:-8080}:${SEARXNG_PORT:-8080}
+    volumes:
+      - /opt/docker-env/searxng/core-config/:/etc/searxng/:Z
+      - searxng-data:/var/cache/searxng/
+    networks:
+       - outside
+       - backend
+
+  valkey:
+    container_name: searxng-valkey
+    image: docker.io/valkey/valkey:9-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data/
+    networks:
+      - backend
+
+  terminals:
+    image: ghcr.io/open-webui/terminals:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker-env/terminals-data:/app/data
+    networks:
+      - backend
+
+
+volumes:
+  ollama: {}
+  open-webui: {}
+  searxng-data: {}
+  valkey-data: {}
+
+
+networks:
+  outside:
+    external: true
+    name: docker_gwbridge
+  backend:
