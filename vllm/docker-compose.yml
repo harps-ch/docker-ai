@@ -56,10 +56,8 @@ services:
       - DOMAIN_CLIENT=${DOMAIN_CLIENT}
       - DOMAIN_SERVER=${DOMAIN_SERVER}
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION}
+      - CONFIG_PATH=https://raw.githubusercontent.com/harps-ch/docker-ai/master/vllm/librechat.yml
     volumes:
-      - type: bind
-        source: ./librechat.yml
-        target: /app/librechat.yaml
       - librechat-images:/app/client/public/images
       - librechat-uploads:/app/uploads
       - librechat-logs:/app/logs
