@@ -113,6 +113,7 @@ webSearch:
       - startpage
       - qwant
       - brave
+      - mojeek
       - wikipedia
   firecrawlApiKey: '${FIRECRAWL_API_KEY}'
   firecrawlApiUrl: '${FIRECRAWL_API_URL}'

@@ -13,3 +13,8 @@ search:
   formats:
     - html
     - json              # required by LibreChat and Firecrawl
+
+# Entries are merged by name with the default engine list (use_default_settings)
+engines:
+  - name: mojeek          # disabled by default; tolerant of self-hosted/server IPs
+    disabled: false
