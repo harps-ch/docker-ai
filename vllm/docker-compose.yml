@@ -22,6 +22,9 @@ services:
       --port 7000
       --gpu-memory-utilization 0.87
       --max-num-seqs 256
+      --enable-auto-tool-choice
+      --tool-call-parser qwen3_xml
+      --reasoning-parser qwen3
 
   # Self-hosted reranker for LibreChat web search, exposed through vLLM's Jina-compatible /v1/rerank.
   # LibreChat always sends model "jina-reranker-v2-base-multilingual", hence the alias.
