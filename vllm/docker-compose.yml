@@ -32,7 +32,6 @@ services:
       - rag_api
     image: registry.librechat.ai/danny-avila/librechat-dev:latest
     restart: always
-    user: "${UID}:${GID}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -53,10 +52,10 @@ services:
       - type: bind
         source: ./librechat.yml
         target: /app/librechat.yaml
-      - ./images:/app/client/public/images
-      - ./uploads:/app/uploads
-      - ./logs:/app/logs
-      - ./skill:/app/skill
+      - librechat-images:/app/client/public/images
+      - librechat-uploads:/app/uploads
+      - librechat-logs:/app/logs
+      - librechat-skill:/app/skill
       - librechat-data:/app/data
 
   admin-panel:
@@ -122,3 +121,7 @@ volumes:
   pgdata2: {}
   librechat-data: {}
   huggingface-cache: {}
+  librechat-images: {}
+  librechat-uploads: {}
+  librechat-logs: {}
+  librechat-skill: {}
