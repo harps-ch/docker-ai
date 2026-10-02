@@ -131,3 +131,5 @@ volumes:
   librechat-uploads: {}
   librechat-logs: {}
   librechat-skill: {}
+  mongodb-data: {}
+  meili-data: {}
