@@ -31,8 +31,6 @@ services:
       - mongodb
       - rag_api
     image: registry.librechat.ai/danny-avila/librechat-dev:latest
-    env_file:
-      - stack.env
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -50,6 +48,14 @@ services:
       - http_proxy=${http_proxy:-}
       - https_proxy=${https_proxy:-}
       - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,host.docker.internal
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - CREDS_KEY=${CREDS_KEY}
+      - CREDS_IV=${CREDS_IV}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - DOMAIN_CLIENT=${DOMAIN_CLIENT}
+      - DOMAIN_SERVER=${DOMAIN_SERVER}
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION}
     volumes:
       - type: bind
         source: ./librechat.yml
@@ -112,8 +118,6 @@ services:
   rag_api:
     container_name: rag_api
     image: registry.librechat.ai/danny-avila/librechat-rag-api-dev-lite:latest
-    env_file:
-      - stack.env
     environment:
       - DB_HOST=vectordb
       - RAG_PORT=${RAG_PORT:-8200}
