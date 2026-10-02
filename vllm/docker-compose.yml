@@ -20,8 +20,34 @@ services:
       --model Qwen/Qwen3.8-27B
       --host 0.0.0.0
       --port 7000
-      --gpu-memory-utilization 0.9
+      --gpu-memory-utilization 0.87
       --max-num-seqs 256
+
+  # Self-hosted reranker for LibreChat web search, exposed through vLLM's Jina-compatible /v1/rerank.
+  # LibreChat always sends model "jina-reranker-v2-base-multilingual", hence the alias.
+  reranker:
+    container_name: reranker
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    restart: unless-stopped
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      --model BAAI/bge-reranker-v2-m3
+      --served-model-name jina-reranker-v2-base-multilingual BAAI/bge-reranker-v2-m3
+      --host 0.0.0.0
+      --port 7001
+      --gpu-memory-utilization 0.06
 
   api:
     container_name: LibreChat
@@ -44,10 +70,10 @@ services:
       - PROXY=${PROXY:-}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
-      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1,::1},${no_proxy:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,host.docker.internal
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1,::1},${no_proxy:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,host.docker.internal
       - http_proxy=${http_proxy:-}
       - https_proxy=${https_proxy:-}
-      - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,host.docker.internal
+      - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,host.docker.internal
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - CREDS_KEY=${CREDS_KEY}
@@ -56,6 +82,11 @@ services:
       - DOMAIN_CLIENT=${DOMAIN_CLIENT}
       - DOMAIN_SERVER=${DOMAIN_SERVER}
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION}
+      - SEARXNG_INSTANCE_URL=http://searxng:8080
+      - FIRECRAWL_API_URL=http://firecrawl-api:3002
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-dummy}
+      - JINA_API_KEY=local
+      - JINA_API_URL=http://reranker:7001/v1/rerank
       - CONFIG_PATH=https://raw.githubusercontent.com/harps-ch/docker-ai/master/vllm/librechat.yml
     volumes:
       - librechat-images:/app/client/public/images
@@ -121,6 +152,134 @@ services:
     depends_on:
       - vectordb
 
+  searxng:
+    container_name: searxng-core
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      # Bound to localhost by default: LibreChat and Firecrawl reach it via the internal network.
+      - "${SEARXNG_HOST:-127.0.0.1}:${SEARXNG_PORT:-8080}:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8080}/
+      - SEARXNG_SECRET=${SEARXNG_SECRET}
+    volumes:
+      - ./searxng:/etc/searxng
+      - searxng-data:/var/cache/searxng/
+
+  # --- Firecrawl (self-hosted), adapted from github.com/firecrawl/firecrawl/docker-compose.yaml ---
+  firecrawl-api:
+    container_name: firecrawl-api
+    image: ghcr.io/firecrawl/firecrawl:latest
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: 3002
+      EXTRACT_WORKER_PORT: 3004
+      WORKER_PORT: 3005
+      ENV: local
+      REDIS_URL: redis://firecrawl-redis:6379
+      REDIS_RATE_LIMIT_URL: redis://firecrawl-redis:6379
+      PLAYWRIGHT_MICROSERVICE_URL: http://firecrawl-playwright:3000/scrape
+      NUQ_RABBITMQ_URL: amqp://firecrawl-rabbitmq:5672
+      POSTGRES_HOST: firecrawl-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${FIRECRAWL_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${FIRECRAWL_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${FIRECRAWL_POSTGRES_DB:-postgres}
+      USE_DB_AUTHENTICATION: "false"
+      NUM_WORKERS_PER_QUEUE: ${FIRECRAWL_NUM_WORKERS_PER_QUEUE:-8}
+      CRAWL_CONCURRENT_REQUESTS: ${FIRECRAWL_CRAWL_CONCURRENT_REQUESTS:-10}
+      MAX_CONCURRENT_JOBS: ${FIRECRAWL_MAX_CONCURRENT_JOBS:-5}
+      BROWSER_POOL_SIZE: ${FIRECRAWL_BROWSER_POOL_SIZE:-5}
+      HARNESS_STARTUP_TIMEOUT_MS: 60000
+      BULL_AUTH_KEY: ${FIRECRAWL_BULL_AUTH_KEY}
+      # LLM features (/extract, JSON format) use the local vLLM
+      OPENAI_API_KEY: dummy
+      OPENAI_BASE_URL: http://vllm:7000/v1
+      MODEL_NAME: Qwen/Qwen3.8-27B
+      # Search (/search) goes through SearXNG
+      SEARXNG_ENDPOINT: http://searxng:8080
+      SEARXNG_ENGINES: ${SEARXNG_ENGINES:-}
+      SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES:-}
+      LOGGING_LEVEL: ${FIRECRAWL_LOGGING_LEVEL:-info}
+    depends_on:
+      firecrawl-redis:
+        condition: service_started
+      firecrawl-playwright:
+        condition: service_started
+      firecrawl-rabbitmq:
+        condition: service_healthy
+      firecrawl-postgres:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    ports:
+      # No auth (USE_DB_AUTHENTICATION=false): keep it off the public interface.
+      - "127.0.0.1:${FIRECRAWL_PORT:-3002}:3002"
+    command: node dist/src/harness.js --start-docker
+    cpus: 4.0
+    mem_limit: 8G
+    memswap_limit: 8G
+
+  firecrawl-playwright:
+    container_name: firecrawl-playwright
+    image: ghcr.io/firecrawl/playwright-service:latest
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      BLOCK_MEDIA: ${FIRECRAWL_BLOCK_MEDIA:-true}
+      MAX_CONCURRENT_PAGES: ${FIRECRAWL_CRAWL_CONCURRENT_REQUESTS:-10}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cpus: 2.0
+    mem_limit: 4G
+    memswap_limit: 4G
+    tmpfs:
+      - /tmp/.cache:noexec,nosuid,size=1g
+
+  firecrawl-redis:
+    container_name: firecrawl-redis
+    image: redis:alpine
+    restart: unless-stopped
+    command: redis-server --bind 0.0.0.0
+
+  firecrawl-rabbitmq:
+    container_name: firecrawl-rabbitmq
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    command: rabbitmq-server
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  firecrawl-postgres:
+    container_name: firecrawl-postgres
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${FIRECRAWL_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${FIRECRAWL_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${FIRECRAWL_POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FIRECRAWL_POSTGRES_USER:-postgres} -d ${FIRECRAWL_POSTGRES_DB:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - firecrawl-pgdata:/var/lib/postgresql/data
+
 volumes:
   pgdata2: {}
   librechat-data: {}
@@ -131,3 +290,5 @@ volumes:
   librechat-skill: {}
   mongodb-data: {}
   meili-data: {}
+  searxng-data: {}
+  firecrawl-pgdata: {}

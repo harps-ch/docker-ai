@@ -99,3 +99,26 @@ endpoints:
       titleConvo: true
       titleModel: 'Qwen/Qwen3.8-27B'
       modelDisplayLabel: 'Qwen'
+# Web search: SearXNG (search) -> Firecrawl (scraping) -> self-hosted reranker (Jina-compatible API)
+webSearch:
+  searchProvider: searxng
+  scraperProvider: firecrawl
+  rerankerType: jina
+  searxngInstanceUrl: '${SEARXNG_INSTANCE_URL}'
+  searxngSearchOptions:
+    # DuckDuckGo (in LibreChat's default list) serves CAPTCHAs to self-hosted instances
+    engines:
+      - google
+      - bing
+      - startpage
+      - qwant
+      - brave
+  firecrawlApiKey: '${FIRECRAWL_API_KEY}'
+  firecrawlApiUrl: '${FIRECRAWL_API_URL}'
+  jinaApiKey: '${JINA_API_KEY}'
+  jinaApiUrl: '${JINA_API_URL}'
+  # Private (internal docker) endpoints are blocked by LibreChat's SSRF guard unless listed here
+  allowedAddresses:
+    - 'searxng:8080'
+    - 'firecrawl-api:3002'
+    - 'reranker:7001'

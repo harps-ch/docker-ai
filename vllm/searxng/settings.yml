@@ -1,0 +1,14 @@
+# Minimal SearXNG config: everything else comes from the image defaults.
+# The secret key is overridden by the SEARXNG_SECRET env var (see docker-compose.yml).
+use_default_settings: true
+
+server:
+  secret_key: "change-me-via-SEARXNG_SECRET"
+  limiter: false        # internal use only (LibreChat / Firecrawl), no bot protection needed
+  image_proxy: false
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json              # required by LibreChat and Firecrawl
