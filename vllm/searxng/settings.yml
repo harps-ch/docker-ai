@@ -1,4 +1,5 @@
 # Minimal SearXNG config: everything else comes from the image defaults.
+# Baked into the image by ./Dockerfile (Portainer cannot bind-mount it from the repo).
 # The secret key is overridden by the SEARXNG_SECRET env var (see docker-compose.yml).
 use_default_settings: true
 
