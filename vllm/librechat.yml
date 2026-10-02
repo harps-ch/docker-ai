@@ -88,3 +88,14 @@ actions:
     - 'swapi.dev'
     - 'librechat.ai'
     - 'google.com'
+endpoints:
+  custom:
+    - name: 'vLLM'
+      apiKey: 'dummy'
+      baseURL: 'http://vllm:7000/v1'
+      models:
+        default: ['Qwen/Qwen3.8-27B']
+        fetch: true
+      titleConvo: true
+      titleModel: 'Qwen/Qwen3.8-27B'
+      modelDisplayLabel: 'Qwen'
