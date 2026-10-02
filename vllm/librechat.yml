@@ -106,13 +106,14 @@ webSearch:
   rerankerType: jina
   searxngInstanceUrl: '${SEARXNG_INSTANCE_URL}'
   searxngSearchOptions:
-    # DuckDuckGo (in LibreChat's default list) serves CAPTCHAs to self-hosted instances
+    # DuckDuckGo (in LibreChat's default list) serves CAPTCHAs to self-hosted instances,
+    # Bing returns unrelated results (often Chinese/zhihu.com) for unmatched queries
     engines:
       - google
-      - bing
       - startpage
       - qwant
       - brave
+      - wikipedia
   firecrawlApiKey: '${FIRECRAWL_API_KEY}'
   firecrawlApiUrl: '${FIRECRAWL_API_URL}'
   jinaApiKey: '${JINA_API_KEY}'
