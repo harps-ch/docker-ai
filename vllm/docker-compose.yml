@@ -91,6 +91,16 @@ services:
       - JINA_API_KEY=local
       - JINA_API_URL=http://reranker:7001/v1/rerank
       - CONFIG_PATH=https://raw.githubusercontent.com/harps-ch/docker-ai/master/vllm/librechat.yml
+      - LIBRECHAT_CODE_BASEURL=${LIBRECHAT_CODE_BASEURL}
+      - CODEAPI_AUTH_PROVIDER=${CODEAPI_AUTH_PROVIDER}
+      - CODEAPI_JWT_PRIVATE_JWK_JSON=${CODEAPI_JWT_PRIVATE_JWK_JSON}
+      - CODEAPI_JWT_KID=${CODEAPI_JWT_KID}
+      - CODEAPI_JWT_ALGORITHM=${CODEAPI_JWT_ALGORITHM}
+      - CODEAPI_JWT_ISSUER=${CODEAPI_JWT_ISSUER}
+      - CODEAPI_JWT_AUDIENCE=${CODEAPI_JWT_AUDIENCE}
+      - CODEAPI_JWT_TTL_SECONDS=${CODEAPI_JWT_TTL_SECONDS}
+      - CODEAPI_JWT_MINT_CACHE_SECONDS=${CODEAPI_JWT_MINT_CACHE_SECONDS}
+      - CODEAPI_JWT_SINGLE_TENANT_ID=${CODEAPI_JWT_SINGLE_TENANT_ID}
     volumes:
       - librechat-images:/app/client/public/images
       - librechat-uploads:/app/uploads
