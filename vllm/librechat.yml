@@ -8,6 +8,7 @@ interface:
   # Note: This setting does not disable the Agents File Search Capability.
   # To disable the Agents Capability, see the Agents Endpoint configuration instead.
   fileSearch: true
+  runCode: true
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'
@@ -99,6 +100,8 @@ endpoints:
       titleConvo: true
       titleModel: 'Qwen/Qwen3.8-27B'
       modelDisplayLabel: 'Qwen'
+  agents:
+    capabilities: ["execute_code", "web_search", "file_search", "tools", "artifacts", "actions", "context", "ocr"]
 # Web search: SearXNG (search) -> Firecrawl (scraping) -> self-hosted reranker (Jina-compatible API)
 webSearch:
   searchProvider: searxng
