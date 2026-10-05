@@ -124,3 +124,13 @@ webSearch:
     - 'searxng:8080'
     - 'firecrawl-api:3002'
     - 'reranker:7001'
+mcpServers:
+  fetch:
+    type: stdio
+    command: uvx
+    args:
+      - mcp-server-fetch
+    timeout: 60000
+    serverInstructions: |
+      Utilise l'outil fetch quand l'utilisateur fournit une URL.
+      Si la page est tronquée, rappelle l'outil avec start_index pour lire la suite.
