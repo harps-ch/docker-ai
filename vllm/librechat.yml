@@ -96,9 +96,10 @@ actions:
     - 'google.com'
 endpoints:
   custom:
+    # Routed through the LiteLLM proxy (virtual key, usage tracking) instead of hitting vLLM directly
     - name: 'vLLM'
-      apiKey: 'dummy'
-      baseURL: 'http://vllm:7000/v1'
+      apiKey: '${LITELLM_LIBRECHAT_KEY}'
+      baseURL: 'http://litellm:4000/v1'
       models:
         default: ['Qwen/Qwen3.8-27B']
         fetch: true

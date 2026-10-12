@@ -2,8 +2,8 @@ services:
   vllm:
     image: vllm/vllm-openai:latest
     runtime: nvidia
-    ports:
-      - "7000:7000"
+    # No published port: only reachable on the internal network (LiteLLM, Firecrawl).
+    # External clients must go through LiteLLM on port 4000.
     volumes:
       - huggingface-cache:/root/.cache/huggingface
     environment:
@@ -52,6 +52,52 @@ services:
       --port 7001
       --gpu-memory-utilization 0.06
 
+  # OpenAI-compatible gateway in front of vLLM, with virtual keys per user/tool.
+  # LibreChat talks to it internally; IDE clients (Cline, Copilot BYOK) use port 4000.
+  litellm:
+    container_name: litellm
+    image: ghcr.io/berriai/litellm:main-stable
+    restart: unless-stopped
+    ports:
+      - "${LITELLM_HOST:-0.0.0.0}:${LITELLM_PORT:-4000}:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
+      - DATABASE_URL=postgresql://litellm:${LITELLM_DB_PASSWORD}@litellm-db:5432/litellm
+      - STORE_MODEL_IN_DB=False
+      - UI_USERNAME=${LITELLM_UI_USERNAME:-admin}
+      - UI_PASSWORD=${LITELLM_UI_PASSWORD}
+    command: --config /app/config.yaml --port 4000
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+      vllm:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  litellm-db:
+    container_name: litellm-db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD}
+    volumes:
+      - litellm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
     container_name: LibreChat
     ports:
@@ -59,6 +105,7 @@ services:
     depends_on:
       - mongodb
       - rag_api
+      - litellm
     image: registry.librechat.ai/danny-avila/librechat-dev:latest
     restart: always
     extra_hosts:
@@ -73,10 +120,10 @@ services:
       - PROXY=${PROXY:-}
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
-      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1,::1},${no_proxy:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,host.docker.internal
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1,::1},${no_proxy:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,litellm,host.docker.internal
       - http_proxy=${http_proxy:-}
       - https_proxy=${https_proxy:-}
-      - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,host.docker.internal
+      - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,searxng,firecrawl-api,reranker,litellm,host.docker.internal
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - CREDS_KEY=${CREDS_KEY}
@@ -90,6 +137,7 @@ services:
       - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-dummy}
       - JINA_API_KEY=local
       - JINA_API_URL=http://reranker:7001/v1/rerank
+      - LITELLM_LIBRECHAT_KEY=${LITELLM_LIBRECHAT_KEY}
       - CONFIG_PATH=https://raw.githubusercontent.com/harps-ch/docker-ai/master/vllm/librechat.yml
       - LIBRECHAT_CODE_BASEURL=${LIBRECHAT_CODE_BASEURL}
       - CODEAPI_AUTH_PROVIDER=${CODEAPI_AUTH_PROVIDER}
@@ -309,3 +357,4 @@ volumes:
   meili-data: {}
   searxng-data: {}
   firecrawl-pgdata: {}
+  litellm-pgdata: {}
