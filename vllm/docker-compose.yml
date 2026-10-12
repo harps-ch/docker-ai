@@ -56,12 +56,15 @@ services:
   # LibreChat talks to it internally; IDE clients (Cline, Copilot BYOK) use port 4000.
   litellm:
     container_name: litellm
-    image: ghcr.io/berriai/litellm:main-stable
+    build:
+      context: ./litellm
+      args:
+        LITELLM_VERSION: ${LITELLM_VERSION:-main-stable}
+    image: litellm-vllm:local
+    pull_policy: build
     restart: unless-stopped
     ports:
       - "${LITELLM_HOST:-0.0.0.0}:${LITELLM_PORT:-4000}:4000"
-    volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
