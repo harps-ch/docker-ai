@@ -16,6 +16,8 @@ litellm_settings:
   # Silently drop OpenAI params vLLM does not understand instead of failing the request
   drop_params: true
   request_timeout: 600
+  # Send user invitations / key notifications through the SMTP_* env vars
+  callbacks: ["smtp_email"]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
