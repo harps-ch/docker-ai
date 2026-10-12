@@ -72,6 +72,11 @@ interface:
     create: true
     share: false
     public: false
+  remoteAgents:
+    use: true
+    create: true
+    share: true
+    public: false
   peoplePicker:
     users: true
     groups: true
