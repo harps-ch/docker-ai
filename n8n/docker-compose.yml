@@ -31,12 +31,19 @@ services:
       WEBHOOK_URL: https://n8n.tarzan.harps.ch/
     volumes:
       - n8n_data:/home/node/.n8n
+    networks:
+      - default
+      # Shared with the vllm stack: LiteLLM is reachable at http://litellm:4000
+      - ai-shared
     depends_on:
       postgres:
         condition: service_healthy
-    extra_hosts:
-      - "litellm.tarzan.harps.ch:host-gateway"
 
 volumes:
   pg_data:
   n8n_data:
+
+networks:
+  # Created once with: docker network create ai-shared
+  ai-shared:
+    external: true

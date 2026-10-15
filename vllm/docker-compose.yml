@@ -81,6 +81,10 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_SENDER_EMAIL=${SMTP_SENDER_EMAIL}
     command: --config /app/config.yaml --port 4000
+    networks:
+      - default
+      # Shared with the n8n stack: n8n reaches LiteLLM at http://litellm:4000
+      - ai-shared
     depends_on:
       litellm-db:
         condition: service_healthy
@@ -378,3 +382,8 @@ volumes:
   searxng-data: {}
   firecrawl-pgdata: {}
   litellm-pgdata: {}
+
+networks:
+  # Created once with: docker network create ai-shared
+  ai-shared:
+    external: true
