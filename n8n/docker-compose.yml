@@ -55,7 +55,7 @@ services:
         condition: service_healthy
 
   task-runners:
-    image: docker.n8n.io/n8nio/runners:${N8N_VERSION:-latest}
+    image: ghcr.io/n8n-io/runners:${N8N_VERSION:-latest}
     restart: unless-stopped
     environment:
       # Broker listens on 5679 inside the n8n container (not published)
