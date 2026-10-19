@@ -33,6 +33,15 @@ services:
       WEBHOOK_URL: https://n8n.tarzan.harps.ch/
       # Behind the host reverse proxy: trust one X-Forwarded-For hop
       N8N_PROXY_HOPS: 1
+      # SMTP: user invites and password reset emails
+      N8N_EMAIL_MODE: smtp
+      N8N_SMTP_HOST: ${N8N_SMTP_HOST}
+      N8N_SMTP_PORT: ${N8N_SMTP_PORT:-465}
+      N8N_SMTP_USER: ${N8N_SMTP_USER}
+      N8N_SMTP_PASS: ${N8N_SMTP_PASS}
+      N8N_SMTP_SENDER: ${N8N_SMTP_SENDER}
+      # true = implicit TLS (port 465), false = STARTTLS (port 587)
+      N8N_SMTP_SSL: ${N8N_SMTP_SSL:-true}
       # Code node sandbox: run JS/Python in the separate task-runners container
       N8N_RUNNERS_ENABLED: "true"
       N8N_RUNNERS_MODE: external
